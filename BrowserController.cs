@@ -15,6 +15,25 @@ namespace auto_test_baigiamasis
 
         public DefaultWait<IWebDriver> fluentWait;
 
+        // Wrap all test cases in this wrapper so that when there is
+        // a failed test, the catch block would trigger a screenshot creation
+        protected void ExceptionWrapper(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                Screenshot TakeScreenshot = ((ITakesScreenshot)driver).GetScreenshot();
+
+                string time = "_" + DateTime.Now.ToString("HH:mm");
+                time = time.Replace(':', '_');
+                TakeScreenshot.SaveAsFile("/Users/viltingai/Desktop/auto-test-baigiamasis/screenshots/" + TestName + time + ".png");
+
+                throw;
+            }
+        }
 
         [SetUp]
         public void setup()
@@ -26,32 +45,23 @@ namespace auto_test_baigiamasis
             this.fluentWait = new DefaultWait<IWebDriver>(driver);
             fluentWait.Timeout = TimeSpan.FromSeconds(5);
             fluentWait.PollingInterval = TimeSpan.FromMilliseconds(250);
-            /* Ignore the exception - NoSuchElementException that indicates that the element is not present */
             fluentWait.IgnoreExceptionTypes(typeof(NoSuchElementException));
             fluentWait.IgnoreExceptionTypes(typeof(ElementClickInterceptedException));
             fluentWait.Message = "Element to be searched not found";
 
             driver.Manage().Window.Maximize();
+
+            int numberOfNotfComponents = returnNumOfElementsExistsByXpath("//*[@class='close' and local-name()='svg']");
+            if (numberOfNotfComponents > 0)
+            {
+                ClickElementByXpath("//*[@class='close' and local-name()='svg']");
+
+            }
         }
 
         [TearDown]
         public void tear()
         {
-            //try
-            //{
-            //    Screenshot TakeScreenshot = ((ITakesScreenshot)driver).GetScreenshot();
-            //    //DateTime time = new DateTime();
-
-            //    string time = "_" + DateTime.Now.ToString("HH:mm");
-            //    Console.WriteLine("_" + time);
-            //    time = time.Replace(':', '_');
-
-            //    TakeScreenshot.SaveAsFile("C:\\Users\\Martynas\\Documents\\Zoom\\TestName\\" + TestName + time + ".png");
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine(e.StackTrace);
-            //}
 
             driver.Quit();
 
@@ -81,12 +91,20 @@ namespace auto_test_baigiamasis
             return count;
         }
 
+        public IWebElement[] getElementsByXpath(string xPath)
+        {
+            IWebElement[] elements = fluentWait.Until(x => x.FindElements(By.XPath(xPath))).ToArray();
+
+            return elements;
+        }
+
         public void EnterTextByXpath(string xpath, string text)
         {
             CheckElementExistsByXpath(xpath);
 
             By element = By.XPath(xpath);
             driver.FindElement(element).SendKeys(text);
+            driver.FindElement(element).SendKeys(Keys.Return);
         }
 
         public string getTextByXpath(string xpath)
@@ -97,34 +115,13 @@ namespace auto_test_baigiamasis
             return searchResult.Text;
         }
 
-        public void ClickElementByBy(By element)
+        public IWebElement getElementByXpath(string xpath)
         {
-            IWebElement searchResult = fluentWait.Until(x => x.FindElement(element));
-            searchResult.Click();
 
+            IWebElement searchResult = fluentWait.Until(x => x.FindElement(By.XPath(xpath)));
+
+            return searchResult;
         }
-
-        public void ScrollAndClickElementByXpath(string xpath)
-        {
-            CheckElementExistsByXpath(xpath);
-
-
-            By by = By.XPath(xpath);
-            IWebElement element = driver.FindElement(by);
-            Actions actions = new Actions(driver);
-            actions.MoveToElement(element);
-            try
-            {
-                actions.Perform();
-            }
-            catch (Exception ex) { }
-
-            Thread.Sleep(500);
-
-            ClickElementByBy(by);
-        }
-
-
 
     }
 }
